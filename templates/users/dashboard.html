@@ -1,0 +1,126 @@
+{% extends 'base.html' %}
+
+{% block title %}Employee Dashboard{% endblock %}
+
+{% block content %}
+<div class="info-card">
+    <h2>Request Information</h2>
+    <div class="info-grid">
+        <div class="info-item">
+            <div class="info-label">Source IP Address</div>
+            <div class="info-value" id="source-ip">{{ request_info.source_ip }}</div>
+        </div>
+        <div class="info-item">
+            <div class="info-label">Response Time</div>
+            <div class="info-value" id="response-time">{{ request_info.response_time }}ms</div>
+        </div>
+        <div class="info-item">
+            <div class="info-label">Request Timestamp</div>
+            <div class="info-value" id="timestamp">{{ request_info.timestamp }}</div>
+        </div>
+        <div class="info-item">
+            <div class="info-label">User Agent</div>
+            <div class="info-value" id="user-agent">{{ request_info.user_agent|truncatechars:50 }}</div>
+        </div>
+    </div>
+    <button class="refresh-btn" onclick="refreshData()">Refresh Data</button>
+</div>
+
+<div id="users-container">
+    <h2>Employee List</h2>
+    <div class="users-grid" id="users-grid">
+        {% for user in users %}
+        <div class="user-card">
+            <div class="user-name">{{ user.name }}</div>
+            <div class="user-details">
+                <div class="user-detail">
+                    <span class="detail-label">Age:</span>
+                    <span class="detail-value">{{ user.age }}</span>
+                </div>
+                <div class="user-detail">
+                    <span class="detail-label">Phone:</span>
+                    <span class="detail-value">{{ user.phone_number }}</span>
+                </div>
+                <div class="user-detail">
+                    <span class="detail-label">Address:</span>
+                    <span class="detail-value">{{ user.home_address }}</span>
+                </div>
+                <div class="user-detail">
+                    <span class="detail-label">Created:</span>
+                    <span class="detail-value">{{ user.created_at|date:"M d, Y H:i" }}</span>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<script>
+function refreshData() {
+    const startTime = performance.now();
+    
+    // Show loading state
+    document.getElementById('users-grid').innerHTML = '<div class="loading">Loading...</div>';
+    
+    fetch('/users/')
+        .then(response => {
+            const endTime = performance.now();
+            const responseTime = Math.round(endTime - startTime);
+            
+            if (!response.ok) {
+                throw new Error('Network response was not ok');
+            }
+            return response.json();
+        })
+        .then(data => {
+            // Update response time
+            document.getElementById('response-time').textContent = responseTime + 'ms';
+            
+            // Update timestamp
+            document.getElementById('timestamp').textContent = new Date().toLocaleString();
+            
+            // Update users grid
+            const usersGrid = document.getElementById('users-grid');
+            usersGrid.innerHTML = '';
+            
+            data.forEach(user => {
+                const userCard = document.createElement('div');
+                userCard.className = 'user-card';
+                userCard.innerHTML = `
+                    <div class="user-name">${user.name}</div>
+                    <div class="user-details">
+                        <div class="user-detail">
+                            <span class="detail-label">Age:</span>
+                            <span class="detail-value">${user.age}</span>
+                        </div>
+                        <div class="user-detail">
+                            <span class="detail-label">Phone:</span>
+                            <span class="detail-value">${user.phone_number}</span>
+                        </div>
+                        <div class="user-detail">
+                            <span class="detail-label">Address:</span>
+                            <span class="detail-value">${user.home_address}</span>
+                        </div>
+                        <div class="user-detail">
+                            <span class="detail-label">Created:</span>
+                            <span class="detail-value">${new Date(user.created_at).toLocaleString()}</span>
+                        </div>
+                    </div>
+                `;
+                usersGrid.appendChild(userCard);
+            });
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            document.getElementById('users-grid').innerHTML = `
+                <div class="error">
+                    Error loading data: ${error.message}
+                </div>
+            `;
+        });
+}
+
+// Auto-refresh every 30 seconds
+setInterval(refreshData, 30000);
+</script>
+{% endblock %} 

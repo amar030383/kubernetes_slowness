@@ -1,0 +1,33 @@
+version: '3.8'
+
+services:
+  employee-details:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      - SECRET_KEY=django-insecure-your-secret-key-here-change-in-production
+      - DEBUG=True
+      - ALLOWED_HOSTS=*
+    volumes:
+      - ./db.sqlite3:/app/db.sqlite3
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/users/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Optional: Add a reverse proxy for production-like setup
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf
+    depends_on:
+      - employee-details
+    restart: unless-stopped
+    profiles:
+      - production 
