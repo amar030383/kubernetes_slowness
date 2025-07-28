@@ -4,7 +4,7 @@ A simple Django REST Framework-based application that returns a list of users wi
 
 ## Features
 
-- REST API endpoint at `/users/` that returns a list of users
+- REST API endpoint at `/api/users/` that returns a list of users
 - SQLite database for data storage
 - Default user data inserted on startup
 - CORS enabled to allow all origins
@@ -19,7 +19,7 @@ A simple Django REST Framework-based application that returns a list of users wi
 1. **Clone the repository**
    ```bash
    git clone <repository-url>
-   cd automation
+   cd kubernetes_slowness
    ```
 
 2. **Create virtual environment**
@@ -70,55 +70,65 @@ A simple Django REST Framework-based application that returns a list of users wi
 
 3. **Test the API**
    ```bash
-   curl http://localhost:8000/users/
+   curl http://localhost:8000/api/users/
    ```
 
-### Kubernetes
+### Kubernetes Deployment
 
 #### Prerequisites
-- Kubernetes cluster (local or cloud)
+- Minikube or Kubernetes cluster
 - kubectl configured
 - Docker installed
 
 #### Quick Deployment
 
-**Option 1: Using deployment script (Recommended)**
-```bash
-# Linux/Mac
-./deploy.sh
+1. **Start Minikube (if using local cluster)**
+   ```bash
+   minikube start
+   ```
 
-# Windows
-deploy.bat
-```
+2. **Build and load Docker image**
+   ```bash
+   # Build the image
+   docker build -t employee-details:latest .
+   
+   # Load into minikube (if using minikube)
+   minikube image load employee-details:latest
+   ```
 
-**Option 2: Manual deployment**
-```bash
-# Build Docker image
-docker build -t employee-details:latest .
+3. **Deploy to Kubernetes**
+   ```bash
+   kubectl apply -f k8s-deployment-simple.yaml
+   ```
 
-# Deploy to Kubernetes
-kubectl apply -f k8s-deployment.yaml
-```
+4. **Check deployment status**
+   ```bash
+   kubectl get pods -n employee-details
+   kubectl get services -n employee-details
+   ```
 
 #### Deployment Features
 - **Namespace**: `employee-details` (isolated environment)
-- **Replicas**: 3 (high availability)
+- **Replicas**: 1 (optimized for minikube)
 - **Service Type**: NodePort (port 30080)
-- **Persistent Storage**: 1GB for database
 - **Health Checks**: Liveness and readiness probes
-- **Resource Limits**: CPU and memory constraints
+- **Resource Limits**: Optimized for local development
 - **Rolling Updates**: Zero-downtime deployments
 
 #### Access the Application
 ```bash
-# Check deployment status
-kubectl get pods -n employee-details
-kubectl get services -n employee-details
+# Get minikube IP
+minikube ip
 
-# Access via NodePort
-curl http://localhost:30080/api/users/
-curl http://localhost:30080/dashboard/
+# Access via NodePort (replace IP with your minikube IP)
+curl http://<minikube-ip>:30080/api/users/
+curl http://<minikube-ip>:30080/dashboard/
 ```
+
+**Example URLs (replace with your minikube IP):**
+- **Main Application**: http://192.168.49.2:30080/
+- **API Endpoint**: http://192.168.49.2:30080/api/users/
+- **Dashboard**: http://192.168.49.2:30080/dashboard/
 
 #### Management Commands
 ```bash
@@ -126,10 +136,10 @@ curl http://localhost:30080/dashboard/
 kubectl logs -f deployment/employee-details -n employee-details
 
 # Scale deployment
-kubectl scale deployment employee-details --replicas=5 -n employee-details
+kubectl scale deployment employee-details --replicas=3 -n employee-details
 
 # Delete deployment
-kubectl delete -f k8s-deployment.yaml
+kubectl delete -f k8s-deployment-simple.yaml
 ```
 
 ## Web Interface
@@ -180,7 +190,7 @@ Returns a list of all users.
 ## Project Structure
 
 ```
-automation/
+kubernetes_slowness/
 ├── employee_details/          # Django project settings
 │   ├── __init__.py
 │   ├── settings.py           # Django settings with CORS and REST framework
@@ -204,7 +214,9 @@ automation/
 ├── requirements.txt          # Python dependencies
 ├── env.example               # Environment variables template
 ├── Dockerfile                # Docker configuration
-├── k8s-deployment.yaml       # Kubernetes deployment
+├── k8s-deployment-simple.yaml # Kubernetes deployment
+├── deploy.sh                 # Deployment script for Linux/Mac
+├── deploy.bat                # Deployment script for Windows
 └── README.md                 # This file
 ```
 
@@ -226,6 +238,27 @@ The application automatically creates two default users on startup:
 - John Doe (age 30, phone: 1234567890, address: 123 Main St)
 - Jane Smith (age 25, phone: 9876543210, address: 456 Oak Ave)
 
+## Troubleshooting
+
+### Kubernetes Issues
+
+1. **Pods in Pending state**: Check if there are enough resources in your cluster
+2. **Image pull errors**: Ensure the Docker image is built and loaded into minikube
+3. **Service not accessible**: Verify the NodePort service is created and check the minikube IP
+
+### Common Commands
+
+```bash
+# Check cluster resources
+kubectl describe node minikube
+
+# Check pod events
+kubectl get events -n employee-details
+
+# Check service endpoints
+kubectl get endpoints -n employee-details
+```
+
 ## Production Considerations
 
 1. **Security**: Change the default SECRET_KEY in production
@@ -233,7 +266,8 @@ The application automatically creates two default users on startup:
 3. **Static Files**: Configure a proper static file server
 4. **HTTPS**: Enable HTTPS in production environments
 5. **Monitoring**: Add proper logging and monitoring
+6. **Persistent Storage**: For production, consider adding persistent volumes to the deployment configuration
 
 ## License
 
-This project is open source and available under the MIT License. "# kubernetes_slowness" 
+This project is open source and available under the MIT License. 

@@ -33,7 +33,7 @@ echo -e "${BLUE}🔧 Creating namespace...${NC}"
 kubectl create namespace ${NAMESPACE} --dry-run=client -o yaml | kubectl apply -f -
 
 echo -e "${BLUE}📋 Applying Kubernetes manifests...${NC}"
-kubectl apply -f k8s-deployment.yaml
+kubectl apply -f k8s-deployment-simple.yaml
 
 echo -e "${BLUE}⏳ Waiting for deployment to be ready...${NC}"
 kubectl rollout status deployment/employee-details -n ${NAMESPACE}
@@ -52,4 +52,4 @@ echo -e "${BLUE}🔧 To check logs:${NC}"
 echo -e "   kubectl logs -f deployment/employee-details -n ${NAMESPACE}"
 
 echo -e "${BLUE}🔧 To delete deployment:${NC}"
-echo -e "   kubectl delete -f k8s-deployment.yaml" 
+echo -e "   kubectl delete -f k8s-deployment-simple.yaml" 

@@ -22,7 +22,7 @@ echo 🔧 Creating namespace...
 kubectl create namespace %NAMESPACE% --dry-run=client -o yaml | kubectl apply -f -
 
 echo 📋 Applying Kubernetes manifests...
-kubectl apply -f k8s-deployment.yaml
+kubectl apply -f k8s-deployment-simple.yaml
 
 echo ⏳ Waiting for deployment to be ready...
 kubectl rollout status deployment/employee-details -n %NAMESPACE%
@@ -41,6 +41,6 @@ echo 🔧 To check logs:
 echo    kubectl logs -f deployment/employee-details -n %NAMESPACE%
 
 echo 🔧 To delete deployment:
-echo    kubectl delete -f k8s-deployment.yaml
+echo    kubectl delete -f k8s-deployment-simple.yaml
 
 pause 
