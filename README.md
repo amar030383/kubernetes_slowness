@@ -82,6 +82,16 @@ A simple Django REST Framework-based application that returns a list of users wi
 
 #### Quick Deployment
 
+**Option 1: Using deployment script (Recommended)**
+```bash
+# Linux/Mac
+./deploy.sh
+
+# Windows
+deploy.bat
+```
+
+**Option 2: Manual deployment**
 1. **Start Minikube (if using local cluster)**
    ```bash
    minikube start
@@ -98,13 +108,13 @@ A simple Django REST Framework-based application that returns a list of users wi
 
 3. **Deploy to Kubernetes**
    ```bash
-   kubectl apply -f k8s-deployment-simple.yaml
+   minikube kubectl -- apply -f k8s-deployment-simple.yaml
    ```
 
 4. **Check deployment status**
    ```bash
-   kubectl get pods -n employee-details
-   kubectl get services -n employee-details
+   minikube kubectl -- get pods -n employee-details
+   minikube kubectl -- get services -n employee-details
    ```
 
 #### Deployment Features

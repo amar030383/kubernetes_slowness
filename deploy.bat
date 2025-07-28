@@ -18,29 +18,40 @@ if %ERRORLEVEL% neq 0 (
 
 echo ✅ Docker image built successfully
 
+echo 📤 Loading image into minikube...
+minikube image load %IMAGE_NAME%:%IMAGE_TAG%
+
+if %ERRORLEVEL% neq 0 (
+    echo ❌ Failed to load image into minikube
+    exit /b 1
+)
+
+echo ✅ Image loaded into minikube successfully
+
 echo 🔧 Creating namespace...
-kubectl create namespace %NAMESPACE% --dry-run=client -o yaml | kubectl apply -f -
+minikube kubectl -- create namespace %NAMESPACE% --dry-run=client -o yaml | minikube kubectl -- apply -f -
 
 echo 📋 Applying Kubernetes manifests...
-kubectl apply -f k8s-deployment-simple.yaml
+minikube kubectl -- apply -f k8s-deployment-simple.yaml
 
 echo ⏳ Waiting for deployment to be ready...
-kubectl rollout status deployment/employee-details -n %NAMESPACE%
+minikube kubectl -- rollout status deployment/employee-details -n %NAMESPACE%
 
 echo 🔍 Checking deployment status...
-kubectl get pods -n %NAMESPACE%
-kubectl get services -n %NAMESPACE%
+minikube kubectl -- get pods -n %NAMESPACE%
+minikube kubectl -- get services -n %NAMESPACE%
 
 echo ✅ Deployment completed successfully!
 echo 📋 Access Information:
-echo    Dashboard: http://localhost:30080/dashboard/
-echo    API: http://localhost:30080/api/users/
-echo    Welcome: http://localhost:30080/
+for /f "tokens=*" %%i in ('minikube ip') do set MINIKUBE_IP=%%i
+echo    Dashboard: http://%MINIKUBE_IP%:30080/dashboard/
+echo    API: http://%MINIKUBE_IP%:30080/api/users/
+echo    Welcome: http://%MINIKUBE_IP%:30080/
 
 echo 🔧 To check logs:
-echo    kubectl logs -f deployment/employee-details -n %NAMESPACE%
+echo    minikube kubectl -- logs -f deployment/employee-details -n %NAMESPACE%
 
 echo 🔧 To delete deployment:
-echo    kubectl delete -f k8s-deployment-simple.yaml
+echo    minikube kubectl -- delete -f k8s-deployment-simple.yaml
 
 pause 

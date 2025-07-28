@@ -29,27 +29,39 @@ else
     exit 1
 fi
 
+echo -e "${BLUE}📤 Loading image into minikube...${NC}"
+minikube image load ${IMAGE_NAME}:${IMAGE_TAG}
+
+if [ $? -eq 0 ]; then
+    echo -e "${GREEN}✅ Image loaded into minikube successfully${NC}"
+else
+    echo -e "${RED}❌ Failed to load image into minikube${NC}"
+    exit 1
+fi
+
 echo -e "${BLUE}🔧 Creating namespace...${NC}"
-kubectl create namespace ${NAMESPACE} --dry-run=client -o yaml | kubectl apply -f -
+minikube kubectl -- create namespace ${NAMESPACE} --dry-run=client -o yaml | minikube kubectl -- apply -f -
 
 echo -e "${BLUE}📋 Applying Kubernetes manifests...${NC}"
-kubectl apply -f k8s-deployment-simple.yaml
+minikube kubectl -- apply -f k8s-deployment-simple.yaml
 
 echo -e "${BLUE}⏳ Waiting for deployment to be ready...${NC}"
-kubectl rollout status deployment/employee-details -n ${NAMESPACE}
+minikube kubectl -- rollout status deployment/employee-details -n ${NAMESPACE}
 
 echo -e "${BLUE}🔍 Checking deployment status...${NC}"
-kubectl get pods -n ${NAMESPACE}
-kubectl get services -n ${NAMESPACE}
+minikube kubectl -- get pods -n ${NAMESPACE}
+minikube kubectl -- get services -n ${NAMESPACE}
 
+# Get minikube IP
+MINIKUBE_IP=$(minikube ip)
 echo -e "${GREEN}✅ Deployment completed successfully!${NC}"
 echo -e "${YELLOW}📋 Access Information:${NC}"
-echo -e "   Dashboard: http://localhost:30080/dashboard/"
-echo -e "   API: http://localhost:30080/api/users/"
-echo -e "   Welcome: http://localhost:30080/"
+echo -e "   Dashboard: http://${MINIKUBE_IP}:30080/dashboard/"
+echo -e "   API: http://${MINIKUBE_IP}:30080/api/users/"
+echo -e "   Welcome: http://${MINIKUBE_IP}:30080/"
 
 echo -e "${BLUE}🔧 To check logs:${NC}"
-echo -e "   kubectl logs -f deployment/employee-details -n ${NAMESPACE}"
+echo -e "   minikube kubectl -- logs -f deployment/employee-details -n ${NAMESPACE}"
 
 echo -e "${BLUE}🔧 To delete deployment:${NC}"
-echo -e "   kubectl delete -f k8s-deployment-simple.yaml" 
+echo -e "   minikube kubectl -- delete -f k8s-deployment-simple.yaml" 
