@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: employee-details
+  labels:
+    name: employee-details
+    app: employee-details 

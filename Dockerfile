@@ -27,10 +27,14 @@ COPY env.example .env
 
 # Run migrations and collect static files
 RUN python manage.py makemigrations
-RUN python manage.py migrate
+# Note: Migrations will be run at runtime to ensure DB connection is available
+
+# Copy startup script
+COPY start.sh .
+RUN chmod +x start.sh
 
 # Expose port
 EXPOSE 8000
 
 # Run the application
-CMD ["python", "manage.py", "runserver", "0.0.0.0:8000"] 
+CMD ["./start.sh"] 

@@ -1,0 +1,114 @@
+---
+- name: Deploy Employee Details Full-Stack Application
+  hosts: kubernetes_masters
+  become: yes
+  vars:
+    namespace: employee-details
+    backend_image: employee-details-backend:latest
+    frontend_image: employee-details-frontend:latest
+    
+  tasks:
+    - name: Check if kubectl is available
+      command: kubectl version --client
+      register: kubectl_check
+      failed_when: false
+      
+    - name: Fail if kubectl is not available
+      fail:
+        msg: "kubectl is not available on the target machine"
+      when: kubectl_check.rc != 0
+      
+    - name: Check if namespace exists
+      kubernetes.core.k8s_info:
+        kind: Namespace
+        name: "{{ namespace }}"
+      register: namespace_info
+      
+    - name: Create namespace if it doesn't exist
+      kubernetes.core.k8s:
+        state: present
+        definition:
+          apiVersion: v1
+          kind: Namespace
+          metadata:
+            name: "{{ namespace }}"
+            labels:
+              name: "{{ namespace }}"
+              app: employee-details
+      when: namespace_info.resources | length == 0
+      
+    - name: Apply ConfigMap
+      kubernetes.core.k8s:
+        state: present
+        src: "{{ playbook_dir }}/../manifests/configmap.yaml"
+        
+    - name: Apply Secret
+      kubernetes.core.k8s:
+        state: present
+        src: "{{ playbook_dir }}/../manifests/secret.yaml"
+        
+    - name: Deploy Backend
+      kubernetes.core.k8s:
+        state: present
+        src: "{{ playbook_dir }}/../manifests/backend-deployment.yaml"
+        
+    - name: Deploy Backend Service
+      kubernetes.core.k8s:
+        state: present
+        src: "{{ playbook_dir }}/../manifests/backend-service.yaml"
+        
+    - name: Deploy Frontend
+      kubernetes.core.k8s:
+        state: present
+        src: "{{ playbook_dir }}/../manifests/frontend-deployment.yaml"
+        
+    - name: Deploy Frontend Service
+      kubernetes.core.k8s:
+        state: present
+        src: "{{ playbook_dir }}/../manifests/frontend-service.yaml"
+        
+    - name: Wait for backend deployment to be ready
+      kubernetes.core.k8s_info:
+        kind: Deployment
+        name: employee-details-backend
+        namespace: "{{ namespace }}"
+      register: backend_deployment
+      until: backend_deployment.resources[0].status.readyReplicas is defined and backend_deployment.resources[0].status.readyReplicas > 0
+      retries: 30
+      delay: 10
+      
+    - name: Wait for frontend deployment to be ready
+      kubernetes.core.k8s_info:
+        kind: Deployment
+        name: employee-details-frontend
+        namespace: "{{ namespace }}"
+      register: frontend_deployment
+      until: frontend_deployment.resources[0].status.readyReplicas is defined and frontend_deployment.resources[0].status.readyReplicas > 0
+      retries: 30
+      delay: 10
+      
+    - name: Get service information
+      kubernetes.core.k8s_info:
+        kind: Service
+        namespace: "{{ namespace }}"
+      register: services
+      
+    - name: Display deployment status
+      debug:
+        msg: |
+          Deployment completed successfully!
+          
+          Services:
+          {% for service in services.resources %}
+          - {{ service.metadata.name }}: {{ service.spec.type }}
+            {% if service.spec.type == 'NodePort' %}
+            NodePort: {{ service.spec.ports[0].nodePort }}
+            {% endif %}
+          {% endfor %}
+          
+          To check pod status:
+          kubectl get pods -n {{ namespace }}
+          
+          To view logs:
+          kubectl logs -f deployment/employee-details-backend -n {{ namespace }}
+          kubectl logs -f deployment/employee-details-frontend -n {{ namespace }} 
