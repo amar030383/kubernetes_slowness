@@ -1,0 +1,191 @@
+---
+# Kubernetes Deployment for Employee Details Django Application
+# This file defines the deployment configuration for our Django application
+
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: employee-details
+  labels:
+    name: employee-details
+    app: employee-details-django
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: django-config
+  namespace: employee-details
+data:
+  # Django Settings
+  SECRET_KEY: "django-insecure-your-secret-key-here-change-in-production"
+  DEBUG: "True"
+  ALLOWED_HOSTS: "*"
+  
+  # Database Configuration (SQLite)
+  DB_ENGINE: "django.db.backends.sqlite3"
+  DB_NAME: "db.sqlite3"
+  DB_USER: ""
+  DB_PASSWORD: ""
+  DB_HOST: ""
+  DB_PORT: ""
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: employee-details-django
+  namespace: employee-details
+  labels:
+    app: employee-details-django
+    version: v1.1.0
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: employee-details-django
+  template:
+    metadata:
+      labels:
+        app: employee-details-django
+        version: v1.1.0
+    spec:
+      containers:
+      - name: django-app
+        image: amar3383/employee-details-django:latest
+        ports:
+        - containerPort: 8000
+          name: http
+        env:
+        - name: SECRET_KEY
+          valueFrom:
+            configMapKeyRef:
+              name: django-config
+              key: SECRET_KEY
+        - name: DEBUG
+          valueFrom:
+            configMapKeyRef:
+              name: django-config
+              key: DEBUG
+        - name: ALLOWED_HOSTS
+          valueFrom:
+            configMapKeyRef:
+              name: django-config
+              key: ALLOWED_HOSTS
+        - name: DB_ENGINE
+          valueFrom:
+            configMapKeyRef:
+              name: django-config
+              key: DB_ENGINE
+        - name: DB_NAME
+          valueFrom:
+            configMapKeyRef:
+              name: django-config
+              key: DB_NAME
+        - name: DB_USER
+          valueFrom:
+            configMapKeyRef:
+              name: django-config
+              key: DB_USER
+        - name: DB_PASSWORD
+          valueFrom:
+            configMapKeyRef:
+              name: django-config
+              key: DB_PASSWORD
+        - name: DB_HOST
+          valueFrom:
+            configMapKeyRef:
+              name: django-config
+              key: DB_HOST
+        - name: DB_PORT
+          valueFrom:
+            configMapKeyRef:
+              name: django-config
+              key: DB_PORT
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "250m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+        livenessProbe:
+          httpGet:
+            path: /
+            port: 8000
+          initialDelaySeconds: 60
+          periodSeconds: 30
+          timeoutSeconds: 10
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /
+            port: 8000
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+        volumeMounts:
+        - name: django-data
+          mountPath: /app/db.sqlite3
+          subPath: db.sqlite3
+      volumes:
+      - name: django-data
+        emptyDir: {}
+      restartPolicy: Always
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: employee-details-service
+  namespace: employee-details
+  labels:
+    app: employee-details-django
+spec:
+  type: ClusterIP
+  ports:
+  - port: 80
+    targetPort: 8000
+    protocol: TCP
+    name: http
+  selector:
+    app: employee-details-django
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: employee-details-nodeport
+  namespace: employee-details
+  labels:
+    app: employee-details-django
+spec:
+  type: NodePort
+  ports:
+  - port: 80
+    targetPort: 8000
+    nodePort: 30080
+    protocol: TCP
+    name: http
+  selector:
+    app: employee-details-django
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: employee-details-ingress
+  namespace: employee-details
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+    nginx.ingress.kubernetes.io/cors-allow-origin: "*"
+    nginx.ingress.kubernetes.io/cors-allow-methods: "GET, POST, PUT, DELETE, OPTIONS"
+    nginx.ingress.kubernetes.io/cors-allow-headers: "DNT,User-Agent,X-Requested-With,If-Modified-Since,Cache-Control,Content-Type,Range,Authorization"
+spec:
+  rules:
+  - host: employee-details.local
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: employee-details-service
+            port:
+              number: 80
