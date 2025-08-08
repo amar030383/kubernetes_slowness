@@ -1,0 +1,189 @@
+# Docker Compose configuration for Employee Details Django Application
+# This file defines the services, networks, and volumes needed to run the application
+
+version: '3.8'
+
+# Define the services (containers) that make up our application
+services:
+  # Main Django web application service
+  web:
+    # Build the Docker image from the current directory
+    build: .
+    
+    # Container name for easy identification
+    container_name: employee-information-web
+    
+    # Map port 8000 from container to port 8000 on host machine
+    # Format: "HOST_PORT:CONTAINER_PORT"
+    ports:
+      - "8000:8000"
+    
+    # Environment variables for Django configuration
+    # These override the default values in settings.py
+    environment:
+      # Django secret key for security (change this in production!)
+      - SECRET_KEY=django-insecure-docker-compose-secret-key-change-in-production
+      
+      # Enable debug mode for development
+      - DEBUG=True
+      
+      # Allow connections from any host (for Docker networking)
+      - ALLOWED_HOSTS=localhost,127.0.0.1,0.0.0.0
+      
+      # Database configuration
+      - DB_ENGINE=django.db.backends.sqlite3
+      - DB_NAME=/app/db.sqlite3
+      
+      # Optional: PostgreSQL configuration (uncomment to use PostgreSQL)
+      # - DB_ENGINE=django.db.backends.postgresql
+      # - DB_NAME=employee_db
+      # - DB_USER=employee_user
+      # - DB_PASSWORD=employee_password
+      # - DB_HOST=db
+      # - DB_PORT=5432
+    
+    # Define volumes to persist data between container restarts
+    volumes:
+      # Mount the current directory to /app in the container
+      # This allows code changes without rebuilding the image
+      - .:/app
+      
+      # Mount a named volume for the database file
+      # This ensures data persists even if the container is removed
+      - django_data:/app/db.sqlite3
+    
+    # Define dependencies - this service depends on the database service
+    # The database service will start before this service
+    depends_on:
+      - db
+    
+    # Restart policy: restart the container if it crashes
+    restart: unless-stopped
+    
+    # Health check to ensure the service is running properly
+    healthcheck:
+      # Test if the Django application is responding
+      test: ["CMD", "curl", "-f", "http://localhost:8000/"]
+      
+      # How often to run the health check (every 30 seconds)
+      interval: 30s
+      
+      # How long to wait for the health check to complete
+      timeout: 10s
+      
+      # How many consecutive failures before marking as unhealthy
+      retries: 3
+      
+      # How long to wait before starting health checks
+      start_period: 40s
+
+  # PostgreSQL database service (optional - uncomment to use)
+  # This provides a more robust database for production use
+  db:
+    # Use the official PostgreSQL image
+    image: postgres:15-alpine
+    
+    # Container name for easy identification
+    container_name: employee-information-db
+    
+    # Environment variables for PostgreSQL configuration
+    environment:
+      # Database name
+      - POSTGRES_DB=employee_db
+      
+      # Database user
+      - POSTGRES_USER=employee_user
+      
+      # Database password (change this in production!)
+      - POSTGRES_PASSWORD=employee_password
+    
+    # Define volumes to persist database data
+    volumes:
+      # Mount a named volume for PostgreSQL data
+      # This ensures data persists even if the container is removed
+      - postgres_data:/var/lib/postgresql/data
+    
+    # Expose PostgreSQL port (only needed for external connections)
+    # Comment out if you only need internal container communication
+    ports:
+      - "5432:5432"
+    
+    # Restart policy: restart the container if it crashes
+    restart: unless-stopped
+    
+    # Health check to ensure the database is ready
+    healthcheck:
+      # Test if PostgreSQL is accepting connections
+      test: ["CMD-SHELL", "pg_isready -U employee_user -d employee_db"]
+      
+      # How often to run the health check
+      interval: 10s
+      
+      # How long to wait for the health check to complete
+      timeout: 5s
+      
+      # How many consecutive failures before marking as unhealthy
+      retries: 5
+      
+      # How long to wait before starting health checks
+      start_period: 30s
+
+  # Redis service for caching (optional - uncomment to use)
+  # This can improve performance by caching frequently accessed data
+  # redis:
+  #   image: redis:7-alpine
+  #   container_name: employee-information-redis
+  #   ports:
+  #     - "6379:6379"
+  #   volumes:
+  #     - redis_data:/data
+  #   restart: unless-stopped
+  #   healthcheck:
+  #     test: ["CMD", "redis-cli", "ping"]
+  #     interval: 10s
+  #     timeout: 5s
+  #     retries: 3
+
+# Define named volumes for data persistence
+# These volumes persist data even when containers are removed
+volumes:
+  # Volume for Django database file (SQLite)
+  django_data:
+    # Driver type (local filesystem)
+    driver: local
+    
+    # Optional: specify a custom path on the host
+    # driver_opts:
+    #   type: none
+    #   o: bind
+    #   device: ./data/django
+  
+  # Volume for PostgreSQL data
+  postgres_data:
+    driver: local
+    
+    # Optional: specify a custom path on the host
+    # driver_opts:
+    #   type: none
+    #   o: bind
+    #   device: ./data/postgres
+  
+  # Volume for Redis data (if using Redis)
+  # redis_data:
+  #   driver: local
+
+# Define custom networks (optional)
+# This allows you to create isolated networks for your services
+networks:
+  # Default network for all services
+  default:
+    # Network name for easy identification
+    name: employee-information-network
+    
+    # Network driver type
+    driver: bridge
+    
+    # Optional: specify custom IP range
+    # ipam:
+    #   config:
+    #     - subnet: 172.20.0.0/16
